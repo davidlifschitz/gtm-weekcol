@@ -176,15 +176,19 @@
         return [label, fmt(dt), DAYS[wd], String(us), String(iso), clash];
       }
 
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      }
+
       function render(rows) {
         const head = ["label", "date", "weekday", "US col (Sun=1)", "ISO col (Mon=1)", "note"];
         const all = [head, ...rows];
         $("tbl").innerHTML = all
           .map((r, i) => {
             const cells = r.map((c, j) => {
-              if (i === 0) return `<th>${c}</th>`;
-              if (j === 5 && c) return `<td><span class="pill">${c}</span></td>`;
-              return `<td>${c}</td>`;
+              if (i === 0) return `<th>${esc(c)}</th>`;
+              if (j === 5 && c) return `<td><span class="pill">${esc(c)}</span></td>`;
+              return `<td>${esc(c)}</td>`;
             }).join("");
             return `<tr>${cells}</tr>`;
           })
