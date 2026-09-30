@@ -193,7 +193,7 @@
             return `<tr>${cells}</tr>`;
           })
           .join("");
-        lastCsv = all.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+        lastCsv = all.map((r) => r.map((c) => `"${String(c).replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`).join(",")).join("\n");
         $("out").classList.remove("hidden");
         $("copy").disabled = false;
       }
