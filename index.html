@@ -158,6 +158,7 @@
       function parseIcs(text) {
         const blocks = unfold(text).split(/BEGIN:VEVENT/i).slice(1);
         const rows = [];
+        rows.more = blocks.length > 400;
         for (const b of blocks.slice(0, 400)) {
           const sum = (b.match(/^SUMMARY:(.*)$/im) || [, ""])[1].trim();
           const dt = (b.match(/^DTSTART(?:;[^:]*)?:(\d{8})/im) || [])[1];
@@ -202,10 +203,15 @@
         $("warn").textContent = "";
         const text = $("src").value;
         const rows = [];
+        let cut = false;
         if (/BEGIN:VCALENDAR/i.test(text) || /BEGIN:VEVENT/i.test(text)) {
-          for (const r of parseIcs(text)) rows.push(rowFor(r.label, r.dt));
+          const evs = parseIcs(text);
+          cut = evs.more;
+          for (const r of evs) rows.push(rowFor(r.label, r.dt));
         } else {
-          for (const line of text.split(/\n/).slice(0, 400)) {
+          const lines = text.split(/\n/).filter((l) => l.trim());
+          cut = lines.length > 400;
+          for (const line of lines.slice(0, 400)) {
             if (!line.trim()) continue;
             const dt = parseDate(line);
             if (!dt) continue;
@@ -217,8 +223,16 @@
           $("warn").textContent = "No dates found. Try YYYY-MM-DD or an ICS export.";
           return;
         }
+        if (cut) $("warn").textContent = "Only the first 400 entries were labelled. Split the rest into another run.";
         render(rows);
       };
+
+      async function loadFile(f) {
+        if (f.size > 8 * 1024 * 1024) { $("warn").textContent = "ICS over 8 MB."; return; }
+        $("warn").textContent = "";
+        $("src").value = await f.text();
+        $("drop").textContent = f.name;
+      }
 
       const drop = $("drop");
       drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
@@ -228,15 +242,11 @@
         drop.classList.remove("over");
         const f = e.dataTransfer.files[0];
         if (!f) return;
-        if (f.size > 8 * 1024 * 1024) { $("warn").textContent = "ICS over 8 MB."; return; }
-        $("src").value = await f.text();
-        $("drop").textContent = f.name;
+        await loadFile(f);
       });
       $("file").addEventListener("change", async () => {
         const f = $("file").files[0];
-        if (!f) return;
-        $("src").value = await f.text();
-        $("drop").textContent = f.name;
+        if (f) await loadFile(f);
       });
       $("copy").onclick = async () => {
         await navigator.clipboard.writeText(lastCsv);
